@@ -43,18 +43,45 @@ impl List {
     /// Split on the basis of element match
     /// Returns the new list from the next node of the node which matched the elem provided as
     /// argument
-    pub fn split(&mut self, elem: i32) -> Option<List> {
+    pub fn split_next(&mut self, elem: i32) -> Option<List> {
         let mut current = &mut self.head;
         while let Link::More(ref mut node) = current {
             if node.elem == elem {
                 let mut list = List::new();
                 list.head = mem::replace(&mut node.next, Link::Empty);
                 return Some(list);
-            }
+            } 
             current = &mut node.next;
         }
         None
     }
+
+    #[deprecated]
+    /// The method needs update as this has problem of multiple mutable references. 
+    /// At this point, I'm not even sure if this is doable without Rc, but we'll see in future
+    pub fn split_at(&mut self, elem: i32) -> Option<List> {
+        if let Link::More(ref mut node) = &mut self.head {
+            if node.elem == elem {
+                let mut list = List::new();
+                list.head = mem::replace(&mut self.head, Link::Empty);
+                return Some(list);
+            }
+            let mut node = node;
+            while let Link::More(ref mut next_node) = node.next {
+                if next_node.elem == elem {
+                    let list = List::new(); 
+                    // list.head = mem::replace(&mut node.next, Link::Empty);
+                    return Some(list);
+                }
+                node = next_node;
+            }
+        }
+        None
+    }
+
+    // NOTE: "pub fn merge(&mut self, list: List)" suffers from the same problem as 'split_at'
+    // method ie., they both need to look ahead into next node. Split_at needs it to make new list,
+    // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
 impl Drop for List {
@@ -110,17 +137,17 @@ mod test {
         list.push(4);
         list.push(5);
 
-        let no_list = list.split(10);
+        let no_list = list.split_next(10);
         assert!(no_list.is_none());
 
-        let list2 = list.split(1);
+        let list2 = list.split_next(1);
         assert!(list2.is_some());  // we got the list
         // but it shouldn't have any element
         let mut list2 = list2.unwrap(); 
         assert_eq!(list2.pop(), None);
 
         // move after first element
-        let moved_list = list.split(5);
+        let moved_list = list.split_next(5);
         assert!(moved_list.is_some());
         // old list should have one element now
         assert_eq!(list.pop(), Some(5));
@@ -128,7 +155,7 @@ mod test {
 
         // break from between
         let mut moved_list = moved_list.unwrap();
-        let mut half_list = moved_list.split(3);
+        let mut half_list = moved_list.split_next(3);
         assert!(half_list.is_some());
         // exhaust both the list now
         assert_eq!(moved_list.pop(), Some(4));

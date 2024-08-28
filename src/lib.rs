@@ -1,4 +1,5 @@
 pub mod first;
+pub mod second;
 
 #[allow(dead_code)]
 fn try_first_list() {

@@ -1,22 +1,22 @@
-use std::mem;
-
-pub struct List {
-    head: Link,
+pub struct List<T> {
+    head: Link<T>,
 }
 
-struct Node {
-    elem: i32,
-    next: Link,
+struct Node<T> {
+    elem: T,
+    next: Link<T>,
 }
 
-type Link = Option<Box<Node>>;
+type Link<T> = Option<Box<Node<T>>>;
 
-impl List {
+// NOTE: trait restriction is needed because our split from matches the element with equality
+// operator to break the list
+impl<T> List<T> where T: PartialEq {
     pub fn new() -> Self {
         Self { head: None }
     }
 
-    pub fn push(&mut self, elem: i32) {
+    pub fn push(&mut self, elem: T) {
         // NOTE: we will not be missing all the previous nodes added to list
         // because mem::replace will return dest which was before replacement
         let node = Node {
@@ -26,17 +26,29 @@ impl List {
         self.head = Some(Box::new(node));
     }
 
-    pub fn pop(&mut self) -> Option<i32> {
+    pub fn pop(&mut self) -> Option<T> {
         self.head.take().map(|node| {
             self.head = node.next;
             node.elem
         })
     }
+
+    pub fn peek(&self) -> Option<&T> {
+        self.head.as_ref().map(|node| {
+            &node.elem
+        })
+        // NOTE: If above is unclear, just do below
+        //
+        // match &self.head {
+        //     None => None,
+        //     Some(node) => Some(&node.elem),
+        // }
+    }
     
     /// Split on the basis of element match
     /// Returns the new list from the next node of the node which matched the elem provided as
     /// argument
-    pub fn split_next(&mut self, elem: i32) -> Option<List> {
+    pub fn split_next(&mut self, elem: T) -> Option<List<T>> {
         let mut current = &mut self.head;
         while let Some(ref mut node) = current {
             if node.elem == elem {
@@ -52,7 +64,7 @@ impl List {
     #[deprecated]
     /// The method needs update as this has problem of multiple mutable references. 
     /// At this point, I'm not even sure if this is doable without Rc, but we'll see in future
-    pub fn split_at(&mut self, elem: i32) -> Option<List> {
+    pub fn split_at(&mut self, elem: T) -> Option<List<T>> {
         if let Some(ref mut node) = &mut self.head {
             if node.elem == elem {
                 let mut list = List::new();
@@ -78,11 +90,11 @@ impl List {
     // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
-impl Drop for List {
+impl<T> Drop for List<T> {
     fn drop(&mut self) {
         let mut current = self.head.take();
         while let Some(ref mut boxed_node) = current {
-            current = boxed_node.next.take();
+            current = boxed_node.as_mut().next.take();
             // boxed_node gets dropped here
         }
     }

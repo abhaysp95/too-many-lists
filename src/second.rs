@@ -44,6 +44,12 @@ impl<T> List<T> where T: PartialEq {
         //     Some(node) => Some(&node.elem),
         // }
     }
+
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.head.as_mut().map(|node| {
+            &mut node.elem
+        })
+    }
     
     /// Split on the basis of element match
     /// Returns the new list from the next node of the node which matched the elem provided as
@@ -170,5 +176,20 @@ mod test {
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(2));
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(1));
         assert_eq!(half_list.as_mut().unwrap().pop(), None);
+    }
+
+    #[test]
+    fn test_peek() {
+        let mut list = List::new();
+        assert_eq!(list.peek(), None);
+        assert_eq!(list.peek_mut(), None);
+        list.push(10);
+        list.push(20);
+        assert_eq!(list.peek(), Some(&20));
+        list.peek_mut().map(|elem| {
+            *elem = 30;
+        });
+        _ = list.pop();
+        assert_eq!(list.peek_mut(), Some(&mut 10));
     }
 }

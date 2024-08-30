@@ -1,13 +1,21 @@
+use std::fmt::Display;
+
 pub struct List<T> {
     head: Link<T>,
 }
 
-struct Node<T> {
+pub struct Node<T> {
     elem: T,
     next: Link<T>,
 }
 
-type Link<T> = Option<Box<Node<T>>>;
+pub type Link<T> = Option<Box<Node<T>>>;
+
+impl<T> Display for Node<T> where T: Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.elem)
+    }
+}
 
 // NOTE: trait restriction is needed because our split from matches the element with equality
 // operator to break the list
@@ -96,6 +104,24 @@ impl<T> List<T> where T: PartialEq {
     // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
+// NOTE: <!-- This comment would be updated on other iter kinds of Iterator impl -->
+// While this implementation works, I guess the one reason the writer showed to write it that way is
+// because it shows the clear ownership transfer of the list to the iterator.
+// With the below approach it is not very clear and may give sense that same list object, which was
+// used to create iterator can be used again to perform list operations, which isn't true if list
+// is created with into_iter() method, which will take ownership of the list object and thus will
+// make the list object unusable outside of iterator
+impl<T> Iterator for List<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.head.take().map(|node| {
+            self.head = node.next;
+            node.elem
+        })
+    }
+}
+
 impl<T> Drop for List<T> {
     fn drop(&mut self) {
         let mut current = self.head.take();
@@ -112,7 +138,7 @@ mod test {
 
 
     #[test]
-    fn first_list() {
+    fn second_list() {
         let mut list = List::new();
 
         // check if list empty
@@ -192,4 +218,19 @@ mod test {
         _ = list.pop();
         assert_eq!(list.peek_mut(), Some(&mut 10));
     }
+
+    #[test]
+    fn test_iter() {
+        let mut list = List::new();
+        list.push(10);
+        list.push(20);
+        list.push(30);
+
+        let mut iter = list.into_iter();
+        assert_eq!(iter.next(), Some(30));
+        assert_eq!(iter.next(), Some(20));
+        assert_eq!(iter.next(), Some(10));
+        assert_eq!(iter.next(), None);
+    }
 }
+

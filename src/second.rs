@@ -104,6 +104,24 @@ impl<T> List<T> where T: PartialEq {
     // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
+pub struct IntoIterator<T>(List<T>);
+
+impl<T> List<T> {
+    pub fn into_iter(self) -> IntoIterator<T> {
+        IntoIterator(self)
+    }
+}
+
+// NOTE: We need to satisfy the trait bound for IntoIterator too because List<T> has the constraint
+// This constraint can be more tight, but can't be more loose.
+impl<T> Iterator for IntoIterator<T> where T: PartialEq {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop()
+    }
+}
+
 // NOTE: <!-- This comment would be updated on other iter kinds of Iterator impl -->
 // While this implementation works, I guess the one reason the writer showed to write it that way is
 // because it shows the clear ownership transfer of the list to the iterator.
@@ -220,12 +238,20 @@ mod test {
     }
 
     #[test]
-    fn test_iter() {
+    fn test_iter_mut() {
         let mut list = List::new();
-        list.push(10);
-        list.push(20);
-        list.push(30);
+        list.push(10); list.push(20); list.push(30);
 
+        let mut iter = list.into_iter();
+        assert_eq!(iter.next(), Some(30));
+        assert_eq!(iter.next(), Some(20));
+        assert_eq!(iter.next(), Some(10));
+        assert_eq!(iter.next(), None);
+
+        let mut list = List::new();
+        list.push(10); list.push(20); list.push(30);
+
+        // this into_iter() will return IntoIterator wrapper, which will take ownership of List
         let mut iter = list.into_iter();
         assert_eq!(iter.next(), Some(30));
         assert_eq!(iter.next(), Some(20));

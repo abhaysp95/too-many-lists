@@ -11,7 +11,10 @@ pub struct Node<T> {
 
 pub type Link<T> = Option<Box<Node<T>>>;
 
-impl<T> Display for Node<T> where T: Display {
+impl<T> Display for Node<T>
+where
+    T: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.elem)
     }
@@ -19,7 +22,10 @@ impl<T> Display for Node<T> where T: Display {
 
 // NOTE: trait restriction is needed because our split from matches the element with equality
 // operator to break the list
-impl<T> List<T> where T: PartialEq {
+impl<T> List<T>
+where
+    T: PartialEq,
+{
     pub fn new() -> Self {
         Self { head: None }
     }
@@ -42,9 +48,7 @@ impl<T> List<T> where T: PartialEq {
     }
 
     pub fn peek(&self) -> Option<&T> {
-        self.head.as_ref().map(|node| {
-            &node.elem
-        })
+        self.head.as_ref().map(|node| &node.elem)
         // NOTE: If above is unclear, just do below
         //
         // match &self.head {
@@ -54,11 +58,9 @@ impl<T> List<T> where T: PartialEq {
     }
 
     pub fn peek_mut(&mut self) -> Option<&mut T> {
-        self.head.as_mut().map(|node| {
-            &mut node.elem
-        })
+        self.head.as_mut().map(|node| &mut node.elem)
     }
-    
+
     /// Split on the basis of element match
     /// Returns the new list from the next node of the node which matched the elem provided as
     /// argument
@@ -69,14 +71,14 @@ impl<T> List<T> where T: PartialEq {
                 let mut list = List::new();
                 list.head = node.next.take();
                 return Some(list);
-            } 
+            }
             current = &mut node.next;
         }
         None
     }
 
     #[deprecated]
-    /// The method needs update as this has problem of multiple mutable references. 
+    /// The method needs update as this has problem of multiple mutable references.
     /// At this point, I'm not even sure if this is doable without Rc, but we'll see in future
     pub fn split_at(&mut self, elem: T) -> Option<List<T>> {
         if let Some(ref mut node) = &mut self.head {
@@ -88,7 +90,7 @@ impl<T> List<T> where T: PartialEq {
             let mut node = node;
             while let Some(ref mut next_node) = node.next {
                 if next_node.elem == elem {
-                    let list = List::new(); 
+                    let list = List::new();
                     // list.head = node.next.take();
                     return Some(list);
                 }
@@ -104,17 +106,20 @@ impl<T> List<T> where T: PartialEq {
     // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
-pub struct IntoIterator<T>(List<T>);
+pub struct IntoIter<T>(List<T>);
 
 impl<T> List<T> {
-    pub fn into_iter(self) -> IntoIterator<T> {
-        IntoIterator(self)
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
     }
 }
 
 // NOTE: We need to satisfy the trait bound for IntoIterator too because List<T> has the constraint
 // This constraint can be more tight, but can't be more loose.
-impl<T> Iterator for IntoIterator<T> where T: PartialEq {
+impl<T> Iterator for IntoIter<T>
+where
+    T: PartialEq,
+{
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -122,22 +127,55 @@ impl<T> Iterator for IntoIterator<T> where T: PartialEq {
     }
 }
 
-// NOTE: <!-- This comment would be updated on other iter kinds of Iterator impl -->
-// While this implementation works, I guess the one reason the writer showed to write it that way is
-// because it shows the clear ownership transfer of the list to the iterator.
-// With the below approach it is not very clear and may give sense that same list object, which was
-// used to create iterator can be used again to perform list operations, which isn't true if list
-// is created with into_iter() method, which will take ownership of the list object and thus will
-// make the list object unusable outside of iterator
+pub struct Iter<'a, T> {
+    next: Option<&'a Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter(&self) -> Iter<T> {
+        Iter {
+            next: self.head.as_deref(),
+        }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.map(|node| {
+            // self.next = node.next.as_ref().map(|node| node.as_ref());
+            // self.next = node.next.as_ref().map(|node| &**node);
+            // NOTE: both the above lines are correct, here as_deref() is deref coercion for
+            // &**node
+            //
+            // self.next = node.next.as_deref();
+            // or
+            self.next = node.next.as_ref().map::<&Node<T>, _>(|node| &node);
+            &node.elem
+        })
+    }
+}
+
 impl<T> Iterator for List<T> {
     type Item = T;
 
+    // NOTE: <!-- This comment would be updated on other iter kinds of Iterator impl -->
+    // While this implementation works, I guess the one reason the writer showed to write it that way is
+    // because it shows the clear ownership transfer of the list to the iterator.
+    // With the below approach it is not very clear and may give sense that same list object, which was
+    // used to create iterator can be used again to perform list operations, which isn't true if list
+    // is created with into_iter() method, which will take ownership of the list object and thus will
+    // make the list object unusable outside of iterator
     fn next(&mut self) -> Option<Self::Item> {
         self.head.take().map(|node| {
             self.head = node.next;
             node.elem
         })
     }
+
+    // NOTE: iter() can't be done directly because traits can't hold any value on their own, and we
+    // need some cursor (variable) to tell us where iterator is pointing at some particular time
 }
 
 impl<T> Drop for List<T> {
@@ -153,7 +191,6 @@ impl<T> Drop for List<T> {
 #[cfg(test)]
 mod test {
     use super::List;
-
 
     #[test]
     fn second_list() {
@@ -197,9 +234,9 @@ mod test {
         assert!(no_list.is_none());
 
         let list2 = list.split_next(1);
-        assert!(list2.is_some());  // we got the list
-        // but it shouldn't have any element
-        let mut list2 = list2.unwrap(); 
+        assert!(list2.is_some()); // we got the list
+                                  // but it shouldn't have any element
+        let mut list2 = list2.unwrap();
         assert_eq!(list2.pop(), None);
 
         // move after first element
@@ -238,9 +275,11 @@ mod test {
     }
 
     #[test]
-    fn test_iter_mut() {
+    fn test_into_iter() {
         let mut list = List::new();
-        list.push(10); list.push(20); list.push(30);
+        list.push(10);
+        list.push(20);
+        list.push(30);
 
         let mut iter = list.into_iter();
         assert_eq!(iter.next(), Some(30));
@@ -249,7 +288,9 @@ mod test {
         assert_eq!(iter.next(), None);
 
         let mut list = List::new();
-        list.push(10); list.push(20); list.push(30);
+        list.push(10);
+        list.push(20);
+        list.push(30);
 
         // this into_iter() will return IntoIterator wrapper, which will take ownership of List
         let mut iter = list.into_iter();
@@ -259,4 +300,3 @@ mod test {
         assert_eq!(iter.next(), None);
     }
 }
-

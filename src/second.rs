@@ -146,13 +146,49 @@ impl<'a, T> Iterator for Iter<'a, T> {
         self.next.map(|node| {
             // self.next = node.next.as_ref().map(|node| node.as_ref());
             // self.next = node.next.as_ref().map(|node| &**node);
+            //
             // NOTE: both the above lines are correct, here as_deref() is deref coercion for
             // &**node
             //
             // self.next = node.next.as_deref();
             // or
-            self.next = node.next.as_ref().map::<&Node<T>, _>(|node| &node);
+            self.next = node.next.as_ref().map::<&Node<T>, _>(|node| node);
             &node.elem
+        })
+    }
+}
+
+pub struct IterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        IterMut {
+            next: self.head.as_deref_mut(),
+            // NOTE: above is short (or better syntactically) for
+            // next: self.head.as_mut().map(|node| {
+            //     &mut **node
+            // })
+        }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| { // <-- line in question
+            // self.next = node.next.as_mut().map(|node| node.as_mut());
+            // self.next = node.next.as_mut().map(|node| &mut **node);
+            //
+            // NOTE: both the above lines are correct, here as_deref() is deref coercion for
+            // &**node
+            //
+            // self.next = node.next.as_deref_mut();
+            // or
+            self.next = node.next.as_mut().map::<&mut Node<T>, _>(|node| node);
+            &mut node.elem
         })
     }
 }

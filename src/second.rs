@@ -299,4 +299,18 @@ mod test {
         assert_eq!(iter.next(), Some(10));
         assert_eq!(iter.next(), None);
     }
+
+    #[test]
+    fn test_iter() {
+        let mut list = List::new();
+        list.push(10);
+        list.push(20);
+        list.push(30);
+
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&30));
+        assert_eq!(iter.next(), Some(&20));
+        assert_eq!(iter.next(), Some(&10));
+        assert_eq!(iter.next(), None);
+    }
 }

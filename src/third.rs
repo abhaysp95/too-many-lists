@@ -33,6 +33,35 @@ where
             head: self.head.as_ref().and_then(|node| node.next.clone()),
         }
     }
+
+    pub fn head(&self) -> Option<&T> {
+        self.head.as_ref().map(|node| &node.elem)
+    }
+}
+
+pub struct Iter<'a, T> {
+    next: Option<&'a Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter(&self) -> Iter<T> {
+        Iter {
+            next: self.head.as_deref(),
+            // as_deref() will work same the way it worked for Box<>
+            // next: self.head.as_ref().map(|node| &**node)
+        }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.map(|node| {
+            self.next = node.next.as_deref();
+            &node.elem
+        })
+    }
 }
 
 // NOTE: we'll come back to these

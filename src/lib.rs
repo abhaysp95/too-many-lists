@@ -1,10 +1,9 @@
 pub mod first;
 pub mod second;
+pub mod third;
 
 #[allow(dead_code)]
-fn try_first_list() {
-    let _ = first::List::new();
-}
+fn tryout() { }
 
 #[cfg(test)]
 mod tests {

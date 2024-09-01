@@ -64,6 +64,9 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
+// NOTE: Since we only shared access to element we can't implement IntoIter (moves) and IterMut
+// (mutable ref.) for this third list as of now
+
 #[cfg(test)]
 mod test {
     use super::List;
@@ -87,8 +90,17 @@ mod test {
         let list = list.tail();
         assert_eq!(list.head(), None);
     }
-}
 
+    #[test]
+    fn test_iter() {
+        let list = List::new().prepend(1).prepend(2).prepend(3);
+
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
+    }
+}
 
 // NOTE: we'll come back to these
 //

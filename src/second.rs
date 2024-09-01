@@ -120,6 +120,29 @@ where
           // and thus when breaked with some value from loop it'll return that value from here for
           // this method
     }
+
+    pub fn merge(&mut self, mut list: List<T>) {
+        match &mut self.head {
+            None => {
+                self.head = list.head.take();
+                return;
+            },
+            Some(ref mut node) => {
+                if node.next.is_none() { // if there's only one node
+                    node.next = list.head.take();
+                } else { // if more than one node exist
+                    let mut next_node = &mut node.next;
+                    while let Some(ref mut node) = next_node {
+                        if node.next.is_none() {
+                            node.next = list.head.take();
+                            break;
+                        }
+                        next_node = &mut node.next;
+                    }
+                }
+            },
+        };
+    }
 }
 
 pub struct IntoIter<T>(List<T>);
@@ -346,6 +369,52 @@ mod test {
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(3));
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(2));
         assert_eq!(half_list.as_mut().unwrap().pop(), None);
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut list1 = List::new();
+        let mut list2 = List::new();
+
+        // when both the lists are empty
+        list1.merge(list2);
+        assert_eq!(list1.pop(), None);
+
+        // when a list is empty
+        list2 = List::new();
+        list2.push(4);
+        list2.push(5);
+        list1.merge(list2);
+        assert_eq!(list1.pop(), Some(5));
+        assert_eq!(list1.pop(), Some(4));
+        assert_eq!(list1.pop(), None);
+
+        // when there's only one element in first list
+        list1.push(1);
+        list2 = List::new();
+        list2.push(4);
+        list2.push(5);
+        list1.merge(list2);
+        assert_eq!(list1.pop(), Some(1));
+        assert_eq!(list1.pop(), Some(5));
+        assert_eq!(list1.pop(), Some(4));
+        assert_eq!(list1.pop(), None);
+
+        // when there are more elements
+        list1.push(1);
+        list1.push(2);
+        list1.push(3);
+        list2 = List::new();
+        list2.push(4);
+        list2.push(5);
+        list2.merge(list1);
+
+        assert_eq!(list2.pop(), Some(5));
+        assert_eq!(list2.pop(), Some(4));
+        assert_eq!(list2.pop(), Some(3));
+        assert_eq!(list2.pop(), Some(2));
+        assert_eq!(list2.pop(), Some(1));
+        assert_eq!(list2.pop(), None);
     }
 
     #[test]

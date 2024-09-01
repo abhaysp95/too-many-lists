@@ -56,32 +56,22 @@ impl List {
         None
     }
 
-    #[deprecated]
-    /// The method needs update as this has problem of multiple mutable references. 
-    /// At this point, I'm not even sure if this is doable without Rc, but we'll see in future
+    // NOTE: why split_at() is written this way ? You'll get to know once you reach second
+    // list(second.rs)
     pub fn split_at(&mut self, elem: i32) -> Option<List> {
-        if let Link::More(ref mut node) = &mut self.head {
-            if node.elem == elem {
-                let mut list = List::new();
-                list.head = mem::replace(&mut self.head, Link::Empty);
-                return Some(list);
-            }
-            let mut node = node;
-            while let Link::More(ref mut next_node) = node.next {
-                if next_node.elem == elem {
-                    let list = List::new(); 
-                    // list.head = mem::replace(&mut node.next, Link::Empty);
-                    return Some(list);
-                }
-                node = next_node;
+        let mut next_node = &mut self.head;
+        loop {
+            match next_node {
+                Link::More(node) if node.elem == elem => {
+                    let mut list = List::new();
+                    list.head = mem::replace(&mut next_node, Link::Empty);
+                    break Some(list);
+                },
+                Link::More(node) => next_node = &mut node.next,
+                Link::Empty => break None,
             }
         }
-        None
     }
-
-    // NOTE: "pub fn merge(&mut self, list: List)" suffers from the same problem as 'split_at'
-    // method ie., they both need to look ahead into next node. Split_at needs it to make new list,
-    // merge will need it to know if the next.node == Link::Empty then next.node = list
 }
 
 impl Drop for List {
@@ -129,7 +119,7 @@ mod test {
     }
 
     #[test]
-    fn test_split() {
+    fn test_split_next() {
         let mut list = List::new();
         list.push(1);
         list.push(2);
@@ -163,6 +153,43 @@ mod test {
         assert_eq!(moved_list.pop(), None);
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(2));
         assert_eq!(half_list.as_mut().unwrap().pop(), Some(1));
+        assert_eq!(half_list.as_mut().unwrap().pop(), None);
+    }
+
+    #[test]
+    fn test_split_at() {
+        let mut list = List::new();
+        list.push(1);
+        list.push(2);
+        list.push(3);
+        list.push(4);
+        list.push(5);
+
+        let no_list = list.split_at(10);
+        assert!(no_list.is_none());
+
+        let list2 = list.split_at(1);
+        assert!(list2.is_some());
+        let mut list2 = list2.unwrap();
+        assert_eq!(list2.pop(), Some(1));
+        assert_eq!(list2.pop(), None);
+
+        // move after first element
+        let moved_list = list.split_at(5);
+        assert!(moved_list.is_some());
+        // old list should have no element now
+        assert_eq!(list.pop(), None);
+
+        // break from between
+        let mut moved_list = moved_list.unwrap();
+        let mut half_list = moved_list.split_at(3);
+        assert!(half_list.is_some());
+        // exhaust both the list now
+        assert_eq!(moved_list.pop(), Some(5));
+        assert_eq!(moved_list.pop(), Some(4));
+        assert_eq!(moved_list.pop(), None);
+        assert_eq!(half_list.as_mut().unwrap().pop(), Some(3));
+        assert_eq!(half_list.as_mut().unwrap().pop(), Some(2));
         assert_eq!(half_list.as_mut().unwrap().pop(), None);
     }
 }

@@ -127,18 +127,14 @@ where
                 self.head = list.head.take();
                 return;
             },
-            Some(ref mut node) => {
-                if node.next.is_none() { // if there's only one node
-                    node.next = list.head.take();
-                } else { // if more than one node exist
-                    let mut next_node = &mut node.next;
-                    while let Some(ref mut node) = next_node {
-                        if node.next.is_none() {
-                            node.next = list.head.take();
-                            break;
-                        }
-                        next_node = &mut node.next;
+            Some(_) => {
+                let mut next_node = &mut self.head;
+                while let Some(ref mut node) = next_node {
+                    if node.next.is_none() {
+                        node.next = list.head.take();
+                        break;
                     }
+                    next_node = &mut node.next;
                 }
             },
         };

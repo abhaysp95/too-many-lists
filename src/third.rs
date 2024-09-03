@@ -102,6 +102,19 @@ mod test {
     }
 }
 
+impl<T> Drop for List<T> {
+    fn drop(&mut self) {
+        let mut cur_link = self.head.take();
+        while let Some(node) = cur_link {
+            if let Ok(node) = Rc::try_unwrap(node) {
+                cur_link = node.next;
+            } else {
+                break;
+            }
+        }
+    }
+}
+
 // NOTE: we'll come back to these
 //
 // pub fn prepend(&mut self, elem: T) {

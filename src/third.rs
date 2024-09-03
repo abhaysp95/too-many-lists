@@ -17,10 +17,7 @@ where
     T: PartialEq + std::fmt::Debug,
 {
     pub fn new(name: String) -> List<T> {
-        Self {
-            head: None,
-            name,
-        }
+        Self { head: None, name }
     }
 
     pub fn prepend(&self, elem: T) -> List<T> {
@@ -79,7 +76,7 @@ impl<T: std::fmt::Debug> Drop for List<T> {
         let mut cur_link = self.head.take();
         while let Some(node) = cur_link {
             if let Ok(node) = Rc::try_unwrap(node) {
-                dbg!(&node.elem);  // will show if you use cargo test -- --nocapture
+                dbg!(&node.elem); // will show if you use cargo test -- --nocapture
                 cur_link = node.next;
             } else {
                 println!("'break' occurred. Returning...");
@@ -117,7 +114,10 @@ mod test {
 
     #[test]
     fn test_iter() {
-        let list = List::new("list1".to_string()).prepend(1).prepend(2).prepend(3);
+        let list = List::new("list1".to_string())
+            .prepend(1)
+            .prepend(2)
+            .prepend(3);
 
         let mut iter = list.iter();
         assert_eq!(iter.next(), Some(&3));
@@ -127,10 +127,25 @@ mod test {
 
     #[test]
     fn test_drop() {
-        let mut list = ManuallyDrop::new(List::new("list1".to_string()).prepend(1).prepend(2).prepend(3).prepend(4).prepend(5));
+        let mut list = ManuallyDrop::new(
+            List::new("list1".to_string())
+                .prepend(1)
+                .prepend(2)
+                .prepend(3)
+                .prepend(4)
+                .prepend(5),
+        );
         let mut list2 = ManuallyDrop::new(List::new("list2".to_string()));
         // calling clone() will increase strong ref count for Rc enclosing that node
-        list2.head = list.head.clone().unwrap().next.clone().unwrap().next.clone();
+        list2.head = list
+            .head
+            .clone()
+            .unwrap()
+            .next
+            .clone()
+            .unwrap()
+            .next
+            .clone();
 
         // confirm list 2
         let mut iter2 = list2.iter();
@@ -168,7 +183,15 @@ mod test {
         // let's make list2 again and this time we'll drop list1 first
         // and list2 should work
         let mut list2 = List::new("list2R".to_string());
-        list2.head = list.head.clone().unwrap().next.clone().unwrap().next.clone();
+        list2.head = list
+            .head
+            .clone()
+            .unwrap()
+            .next
+            .clone()
+            .unwrap()
+            .next
+            .clone();
         dbg!("Dropping list");
         unsafe {
             ManuallyDrop::drop(&mut list);
@@ -186,7 +209,6 @@ mod test {
         // This is because when we prepend(...) to list, it is consuming old list, returning new
         // list and just before returning dropping old list (but not dropping any nodes).
         // Then you'll see the actuall drop for node happens
-
     }
 
     // NOTE: to show output/debug output for tests, pass:

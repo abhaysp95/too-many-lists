@@ -67,6 +67,19 @@ impl<'a, T> Iterator for Iter<'a, T> {
 // NOTE: Since we only shared access to element we can't implement IntoIter (moves) and IterMut
 // (mutable ref.) for this third list as of now
 
+impl<T> Drop for List<T> {
+    fn drop(&mut self) {
+        let mut cur_link = self.head.take();
+        while let Some(node) = cur_link {
+            if let Ok(node) = Rc::try_unwrap(node) {
+                cur_link = node.next;
+            } else {
+                break;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::List;
@@ -100,18 +113,54 @@ mod test {
         assert_eq!(iter.next(), Some(&2));
         assert_eq!(iter.next(), Some(&1));
     }
-}
 
-impl<T> Drop for List<T> {
-    fn drop(&mut self) {
-        let mut cur_link = self.head.take();
-        while let Some(node) = cur_link {
-            if let Ok(node) = Rc::try_unwrap(node) {
-                cur_link = node.next;
-            } else {
-                break;
-            }
-        }
+    #[test]
+    fn test_drop() {
+        let list = List::new().prepend(1).prepend(2).prepend(3).prepend(4).prepend(5);
+        let mut list2 = List::new();
+        // calling clone() will increase strong ref count for Rc enclosing that node
+        list2.head = list.head.clone().unwrap().next.clone().unwrap().next.clone();
+
+        // confirm list 2
+        let mut iter2 = list2.iter();
+        assert_eq!(iter2.next(), Some(&3));
+        assert_eq!(iter2.next(), Some(&2));
+        assert_eq!(iter2.next(), Some(&1));
+        assert_eq!(iter2.next(), None);
+
+        // list1 should still work
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&5));
+        assert_eq!(iter.next(), Some(&4));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), None);
+
+        // let's see what dropping list2 does
+        drop(list2);  // list2 is consumed here
+        // but the nodes will not get dropped, because nodes for list2 has strong ref. count > 1
+        // because the nodes from list1 still reference it
+        // list1 should still work
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&5));
+        assert_eq!(iter.next(), Some(&4));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), None);
+
+        // let's make list2 again and this time we'll drop list1 first
+        // and list2 should work
+        let mut list2 = List::new();
+        list2.head = list.head.clone().unwrap().next.clone().unwrap().next.clone();
+        drop(list);
+        // confirm list 2
+        let mut iter2 = list2.iter();
+        assert_eq!(iter2.next(), Some(&3));
+        assert_eq!(iter2.next(), Some(&2));
+        assert_eq!(iter2.next(), Some(&1));
+        assert_eq!(iter2.next(), None);
     }
 }
 

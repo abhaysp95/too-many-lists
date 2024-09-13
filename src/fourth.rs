@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::{Ref, RefCell}, rc::Rc};
 
 pub struct Node<T> {
     elem: T,
@@ -61,6 +61,13 @@ impl<T> List<T> {
             None
         }
     }
+
+    pub fn peek_front(&self) -> Option<Ref<T>> {
+        self.head.as_ref().map(|node| {
+            // map can be used on Ref too
+            Ref::map(node.borrow(), |node| &node.elem)
+        })
+    }
 }
 
 #[cfg(test)]
@@ -94,5 +101,22 @@ mod test {
         // Check exhaustion
         assert_eq!(list.pop_front(), Some(1));
         assert_eq!(list.pop_front(), None);
+    }
+
+    #[test]
+    fn peek() {
+        let mut list = List::new();
+        // Ref doesn't implement comparision, so no eq!
+        assert!(list.peek_front().is_none());
+        
+        list.push_front(1); list.push_front(2); list.push_front(3);
+        assert_eq!(*list.peek_front().unwrap(), 3);
+        list.pop_front();
+        list.pop_front();
+
+        // check exhaustion
+        assert_eq!(*list.peek_front().unwrap(), 1);
+        list.pop_front();
+        assert!(list.peek_front().is_none());
     }
 }

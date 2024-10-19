@@ -23,6 +23,8 @@ impl<T> Node<T> {
     }
 }
 
+pub struct IntoIter<T>(List<T>);
+
 impl<T> List<T> {
     pub fn new() -> Self {
         Self {
@@ -120,6 +122,20 @@ impl<T> List<T> {
         })
     }
 
+}
+
+impl <T> List<T> {
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop_front()
+    }
 }
 
 #[cfg(test)]

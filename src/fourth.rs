@@ -48,6 +48,21 @@ impl<T> List<T> {
         }
     }
 
+    pub fn push_back(&mut self, elem: T) {
+        let new_node = Node::new(elem);
+        match self.tail.take() {
+            Some(old_node) => {
+                old_node.borrow_mut().next = Some(new_node.clone());
+                new_node.borrow_mut().prev = Some(old_node);
+                self.tail = Some(new_node);
+            },
+            None => {
+                self.tail = Some(new_node.clone());
+                self.head = Some(new_node);
+            }
+        }
+    }
+
     pub fn pop_front(&mut self) -> Option<T> {
         if let Some(old_head) = self.head.take() {
             if let Some(new_head) = old_head.borrow_mut().next.take() {
@@ -62,12 +77,36 @@ impl<T> List<T> {
         }
     }
 
+    pub fn pop_back(&mut self) -> Option<T> {
+        if let Some(old_tail) = self.tail.take() {
+            match old_tail.borrow_mut().prev.take() {
+                Some(new_tail) => {
+                    new_tail.borrow_mut().next.take();
+                    self.tail = Some(new_tail);
+                },
+                None => {
+                    self.head.take();
+                }
+            }
+            Some(Rc::try_unwrap(old_tail).ok().unwrap().into_inner().elem)
+        } else {
+            None
+        }
+    }
+
     pub fn peek_front(&self) -> Option<Ref<T>> {
         self.head.as_ref().map(|node| {
             // map can be used on Ref too
             Ref::map(node.borrow(), |node| &node.elem)
         })
     }
+
+    pub fn peek_back(&self) -> Option<Ref<T>> {
+        self.tail.as_ref().map(|node| {
+            Ref::map(node.borrow(), |node| &node.elem)
+        })
+    }
+
 }
 
 #[cfg(test)]

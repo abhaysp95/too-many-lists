@@ -1,4 +1,4 @@
-use std::{cell::{Ref, RefCell}, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
 
 pub struct Node<T> {
     elem: T,
@@ -101,9 +101,22 @@ impl<T> List<T> {
         })
     }
 
+    pub fn peek_front_mut(&self) -> Option<RefMut<T>> {
+        self.head.as_ref().map(|node| {
+            // map can be used on Ref too
+            RefMut::map(node.borrow_mut(), |node| &mut node.elem)
+        })
+    }
+
     pub fn peek_back(&self) -> Option<Ref<T>> {
         self.tail.as_ref().map(|node| {
             Ref::map(node.borrow(), |node| &node.elem)
+        })
+    }
+
+    pub fn peek_back_mut(&self) -> Option<RefMut<T>> {
+        self.tail.as_ref().map(|node| {
+            RefMut::map(node.borrow_mut(), |node| &mut node.elem)
         })
     }
 
